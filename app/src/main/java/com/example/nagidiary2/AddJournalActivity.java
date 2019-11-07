@@ -13,6 +13,7 @@ import android.view.View;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
@@ -43,8 +44,9 @@ public class AddJournalActivity extends AppCompatActivity {
     private HistoryAdapter historyAdapter;
     public ArrayList<String> colorList = new ArrayList(Arrays.asList(new String[]{"#d9d9d9", "#ffcdd2", "#f8bbd0",
             "#e1bee7", "#bbdefb", "#d7ccc8", "#ffe0b2", "#fff9c4", "#c8e6c9", "#b2dfdb"}));
-    private int state;
+    private int state, basecolor;
     private String username;
+    private boolean isEdited = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +54,36 @@ public class AddJournalActivity extends AppCompatActivity {
         setContentView(R.layout.add_journal_activity);
         addDefaultValues();
         addComponents();
+    }
+
+    private void addDefaultValues() {
+        state = MainActivity.REQUEST_ADD_JOURNAL;
+        editItem = new JournalItem();
+        Intent intent = getIntent();
+        username = intent.getExtras().getString("username");
+        ((TextView) findViewById(R.id.edt_toolbar_edit_title)).setText("Welcome " + username);
+        int requestCode = intent.getExtras().getInt("request");
+        if (requestCode == MainActivity.REQUEST_EDIT_JOURNAL) {
+            state = MainActivity.REQUEST_EDIT_JOURNAL;
+            Bundle bundle = intent.getBundleExtra("package");
+            JournalItem item = (JournalItem) bundle.getSerializable("journalItem");
+            editItem.setId(item.getId());
+            editItem.setTitle(item.getTitle());
+            editItem.setContent(item.getContent());
+            editItem.setDate(item.getDate());
+            editItem.setColor(item.getColor());
+            editItem.setHistoryList(item.getHistoryList());
+            basecolor = editItem.getColor();
+            mRvHistory = findViewById(R.id.rv_journal_history);
+            historyList = new ArrayList<>();
+            historyList.addAll(editItem.getHistoryList());
+            historyAdapter = new HistoryAdapter(this, historyList);
+            mRvHistory.setLayoutManager(new LinearLayoutManager(this));
+            mRvHistory.setAdapter(historyAdapter);
+        } else {
+            editItem.setDate(Calendar.getInstance().getTime());
+            editItem.setColor(Color.parseColor("#bbdefb"));
+        }
     }
 
     private void addComponents() {
@@ -85,29 +117,40 @@ public class AddJournalActivity extends AppCompatActivity {
                         historyItem = new HistoryItem("0", true, username,
                                 username + " created this Journal", new Date());
                     } else {
-                        int nextId = editItem.getHistoryList().size();
                         String oldTitle = editItem.getTitle();
                         String oldContent = editItem.getContent();
                         String historyContent = "";
                         if (!newTitle.equals(oldTitle)) {
+                            isEdited = true;
                             historyContent += "Title changed: " + oldTitle + " to " + newTitle + "\n";
                         }
                         if (!newContent.equals(oldContent)) {
+                            isEdited = true;
                             historyContent += "Content changed: " + oldContent + " to " + newContent;
                         }
+                        if (basecolor != editItem.getColor()) {
+                            isEdited = true;
+                            historyContent += "Color changed: " + basecolor + " to " + editItem.getColor();
+                        }
+                        int nextId = editItem.getHistoryList().size();
                         historyItem = new HistoryItem(nextId + "",
                                 false, username, historyContent, new Date());
                     }
-                    editItem.getHistoryList().add(0, historyItem);
-                    editItem.setTitle(newTitle);
-                    editItem.setContent(newContent);
-                    Bundle bundle = new Bundle();
-                    bundle.putSerializable("journalItem", editItem);
-                    Intent intent = new Intent();
-                    intent.putExtra("requestConfirm", MainActivity.REQUEST_EDIT_JOURNAL);
-                    intent.putExtra("bundle", bundle);
-                    setResult(Activity.RESULT_OK, intent);
-                    finish();
+                    if (isEdited) {
+                        editItem.getHistoryList().add(0, historyItem);
+                        editItem.setTitle(newTitle);
+                        editItem.setContent(newContent);
+                        Bundle bundle = new Bundle();
+                        bundle.putSerializable("journalItem", editItem);
+                        Intent intent = new Intent();
+                        intent.putExtra("requestConfirm", MainActivity.REQUEST_EDIT_JOURNAL);
+                        intent.putExtra("bundle", bundle);
+                        setResult(Activity.RESULT_OK, intent);
+                        finish();
+                    } else {
+                        setResult(Activity.RESULT_CANCELED);
+                        finish();
+                    }
                 }
             }
         });
@@ -149,34 +192,6 @@ public class AddJournalActivity extends AppCompatActivity {
         builder.show();
     }
 
-    private void addDefaultValues() {
-        state = MainActivity.REQUEST_ADD_JOURNAL;
-        editItem = new JournalItem();
-        Intent intent = getIntent();
-        username = intent.getExtras().getString("username");
-        Log.d("username", username + "");
-        int requestCode = intent.getExtras().getInt("request");
-        if (requestCode == MainActivity.REQUEST_EDIT_JOURNAL) {
-            state = MainActivity.REQUEST_EDIT_JOURNAL;
-            Bundle bundle = intent.getBundleExtra("package");
-            JournalItem item = (JournalItem) bundle.getSerializable("journalItem");
-            editItem.setId(item.getId());
-            editItem.setTitle(item.getTitle());
-            editItem.setContent(item.getContent());
-            editItem.setDate(item.getDate());
-            editItem.setColor(item.getColor());
-            editItem.setHistoryList(item.getHistoryList());
-            mRvHistory = findViewById(R.id.rv_journal_history);
-            historyList = new ArrayList<>();
-            historyList.addAll(editItem.getHistoryList());
-            historyAdapter = new HistoryAdapter(this, historyList);
-            mRvHistory.setLayoutManager(new LinearLayoutManager(this));
-            mRvHistory.setAdapter(historyAdapter);
-        } else {
-            editItem.setDate(Calendar.getInstance().getTime());
-            editItem.setColor(Color.parseColor("#bbdefb"));
-        }
-    }
 
     public void onClickDatePickerButton(View v) {
         if (state == MainActivity.REQUEST_ADD_JOURNAL) {
@@ -216,7 +231,6 @@ public class AddJournalActivity extends AppCompatActivity {
                         @Override
                         public void onTimeSet(TimePicker view, int hourOfDay,
                                               int minute) {
-                            Log.d("hohoho", hourOfDay + " " + minute);
                             Calendar itemCal = Calendar.getInstance();
                             itemCal.setTime(editItem.getDate());
                             itemCal.set(Calendar.HOUR_OF_DAY, hourOfDay);

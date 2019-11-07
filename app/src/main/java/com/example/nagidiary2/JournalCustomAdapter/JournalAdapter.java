@@ -84,7 +84,6 @@ public class JournalAdapter extends RecyclerView.Adapter<JournalAdapter.JournalV
         if (daydiff == 0.0) {
             datediff += "Today";
         } else if (daydiff > 0 && daydiff < 7) {
-            Log.d("Datediff", daydiff + "");
             datediff += (int) Math.ceil(daydiff) + " days ago";
         } else {
             datediff += month[itemCal.get(Calendar.MONTH)] + " " + itemCal.get(Calendar.DATE);

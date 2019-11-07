@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -130,6 +131,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 username = dataSnapshot.getValue(String.class);
+                ((TextView) findViewById(R.id.edt_toolbar_main)).setText("Welcome " + username);
                 mUsername.removeEventListener(this);
             }
 
